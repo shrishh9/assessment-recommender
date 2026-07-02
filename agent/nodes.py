@@ -9,8 +9,6 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional
 
-from groq import Groq
-
 from agent.prompts import (
     CLARIFICATION_PROMPT,
     COMPARISON_PROMPT,
@@ -28,6 +26,9 @@ class LLMClient:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise RuntimeError("GROQ_API_KEY is not set")
+
+        from groq import Groq
+
         self.client = Groq(api_key=api_key)
 
     def generate(self, prompt: str) -> str:

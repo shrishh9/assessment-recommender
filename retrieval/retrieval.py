@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-import faiss
-import numpy as np
-from sentence_transformers import SentenceTransformer
+if TYPE_CHECKING:
+    import faiss
+    from sentence_transformers import SentenceTransformer
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -27,23 +27,29 @@ class AssessmentRetriever:
     def __init__(self, index_path: Path = FAISS_INDEX_PATH, metadata_path: Path = METADATA_PATH):
         self.index_path = index_path
         self.metadata_path = metadata_path
-        self.model: Optional[SentenceTransformer] = None
-        self.index: Optional[faiss.Index] = None
+        self.model: Optional["SentenceTransformer"] = None
+        self.index: Optional["faiss.Index"] = None
         self.metadata: Optional[List[Dict[str, Any]]] = None
 
     def _ensure_loaded(self) -> None:
         """Load retrieval assets only when the first search request arrives."""
 
         if self.model is None:
+            from sentence_transformers import SentenceTransformer
+
             self.model = SentenceTransformer(EMBEDDING_MODEL_NAME)
         if self.index is None:
+            import faiss
+
             self.index = faiss.read_index(str(self.index_path))
         if self.metadata is None:
             with self.metadata_path.open("rb") as handle:
                 self.metadata = pickle.load(handle)
 
-    def _embed_query(self, query: str) -> np.ndarray:
+    def _embed_query(self, query: str) -> "Any":
         """Embed a single user query."""
+
+        import numpy as np
 
         self._ensure_loaded()
         assert self.model is not None

@@ -10,24 +10,18 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from agent.nodes import (
-    LLMClient,
-    clarification_node,
-    comparison_node,
-    recommendation_node,
-    refinement_node,
-    refusal_node,
-)
 from agent.planner import build_planner
 from agent.state import AgentResult, AgentState
-from retrieval.retrieval import AssessmentRetriever
-from retrieval.retrieval import build_retriever
+
+if TYPE_CHECKING:
+    from agent.nodes import LLMClient
+    from retrieval.retrieval import AssessmentRetriever
 
 
 class AssessmentFlow:
@@ -37,8 +31,25 @@ class AssessmentFlow:
         self.planner = build_planner()
         self.retriever: Optional[AssessmentRetriever] = None
         self.llm_client = None
-        if os.getenv("GROQ_API_KEY"):
+        self.llm_error: Optional[str] = None
+
+    def _get_llm_client(self) -> Optional["LLMClient"]:
+        """Create the LLM client only when a turn needs generation."""
+
+        if self.llm_client is not None:
+            return self.llm_client
+        if not os.getenv("GROQ_API_KEY"):
+            self.llm_error = "GROQ_API_KEY is not set."
+            return None
+
+        try:
+            from agent.nodes import LLMClient
+
             self.llm_client = LLMClient()
+        except Exception as exc:
+            self.llm_error = f"LLM client could not be initialized: {exc}"
+            return None
+        return self.llm_client
 
     def _route(self, planner_output: Dict[str, Any]) -> str:
         """Map the planner action to the matching node handler."""
@@ -71,6 +82,8 @@ class AssessmentFlow:
             return []
 
         if self.retriever is None:
+            from retrieval.retrieval import build_retriever
+
             self.retriever = build_retriever()
 
         return self.retriever.search(latest_user_message, top_k=5)
@@ -82,18 +95,27 @@ class AssessmentFlow:
         planner_output = self.planner.plan(conversation_history)
         state.planner_output = planner_output
 
-        if planner_output.get("action") in {"Recommend", "Compare", "Refine"}:
-            state.retrieved_assessments = self._retrieve(state.model_dump())
-
-        if self.llm_client is None:
+        llm_client = self._get_llm_client()
+        if llm_client is None:
             return AgentResult(
-                reply="The agent is configured, but GROQ_API_KEY is not set.",
+                reply=f"The agent is configured, but {self.llm_error or 'the LLM client is unavailable'}",
                 recommendations=[],
                 metadata={"action": "Refuse"},
                 end_of_conversation=True,
             )
 
+        if planner_output.get("action") in {"Recommend", "Compare", "Refine"}:
+            state.retrieved_assessments = self._retrieve(state.model_dump())
+
         node_name = self._route(planner_output)
+        from agent.nodes import (
+            clarification_node,
+            comparison_node,
+            recommendation_node,
+            refinement_node,
+            refusal_node,
+        )
+
         node_handlers = {
             "clarification": clarification_node,
             "recommendation": recommendation_node,
@@ -101,7 +123,7 @@ class AssessmentFlow:
             "refinement": refinement_node,
             "refusal": refusal_node,
         }
-        node_result = node_handlers[node_name](state.model_dump(), self.llm_client)
+        node_result = node_handlers[node_name](state.model_dump(), llm_client)
         return AgentResult(**node_result)
 
 

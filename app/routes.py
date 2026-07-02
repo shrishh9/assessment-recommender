@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
+from typing import TYPE_CHECKING, Optional
 
 from fastapi import APIRouter
 
@@ -14,10 +15,32 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from agent.graph import AssessmentFlow
+if TYPE_CHECKING:
+    from agent.graph import AssessmentFlow
 
 router = APIRouter()
-flow = AssessmentFlow()
+_flow: Optional["AssessmentFlow"] = None
+
+
+class _LazyFlowProxy:
+    """Compatibility wrapper that avoids eager AssessmentFlow construction."""
+
+    def run(self, conversation_history):
+        return get_flow().run(conversation_history)
+
+
+flow = _LazyFlowProxy()
+
+
+def get_flow() -> "AssessmentFlow":
+    """Lazily create the agent flow only when the first request arrives."""
+
+    global _flow
+    if _flow is None:
+        from agent.graph import AssessmentFlow
+
+        _flow = AssessmentFlow()
+    return _flow
 
 
 def _to_chat_response(result) -> ChatResponse:
