@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import faiss
 import numpy as np
@@ -27,20 +27,35 @@ class AssessmentRetriever:
     def __init__(self, index_path: Path = FAISS_INDEX_PATH, metadata_path: Path = METADATA_PATH):
         self.index_path = index_path
         self.metadata_path = metadata_path
-        self.model = SentenceTransformer(EMBEDDING_MODEL_NAME)
-        self.index = faiss.read_index(str(index_path))
-        with metadata_path.open("rb") as handle:
-            self.metadata = pickle.load(handle)
+        self.model: Optional[SentenceTransformer] = None
+        self.index: Optional[faiss.Index] = None
+        self.metadata: Optional[List[Dict[str, Any]]] = None
+
+    def _ensure_loaded(self) -> None:
+        """Load retrieval assets only when the first search request arrives."""
+
+        if self.model is None:
+            self.model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+        if self.index is None:
+            self.index = faiss.read_index(str(self.index_path))
+        if self.metadata is None:
+            with self.metadata_path.open("rb") as handle:
+                self.metadata = pickle.load(handle)
 
     def _embed_query(self, query: str) -> np.ndarray:
         """Embed a single user query."""
 
+        self._ensure_loaded()
+        assert self.model is not None
         embedding = self.model.encode([query], convert_to_numpy=True, normalize_embeddings=True)
         return embedding.astype("float32")
 
     def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Return the top-k most relevant assessments for a query."""
 
+        self._ensure_loaded()
+        assert self.index is not None
+        assert self.metadata is not None
         query_embedding = self._embed_query(query)
         scores, indices = self.index.search(query_embedding, top_k)
 

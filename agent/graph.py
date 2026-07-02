@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -26,6 +26,7 @@ from agent.nodes import (
 )
 from agent.planner import build_planner
 from agent.state import AgentResult, AgentState
+from retrieval.retrieval import AssessmentRetriever
 from retrieval.retrieval import build_retriever
 
 
@@ -34,7 +35,7 @@ class AssessmentFlow:
 
     def __init__(self) -> None:
         self.planner = build_planner()
-        self.retriever = build_retriever()
+        self.retriever: Optional[AssessmentRetriever] = None
         self.llm_client = None
         if os.getenv("GROQ_API_KEY"):
             self.llm_client = LLMClient()
@@ -68,6 +69,9 @@ class AssessmentFlow:
 
         if not latest_user_message:
             return []
+
+        if self.retriever is None:
+            self.retriever = build_retriever()
 
         return self.retriever.search(latest_user_message, top_k=5)
 
