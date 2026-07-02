@@ -2,6 +2,22 @@
 
 Conversational FastAPI service that recommends SHL assessments from the official SHL product catalog. The API accepts a full conversation history, plans the next action, retrieves relevant catalog entries with FAISS semantic search, uses Groq for the final natural-language response, and returns a structured JSON payload.
 
+## Backend Deployment
+
+The backend API for examiner/customer review is deployed on Render:
+
+```text
+https://assessment-recommender-r93z.onrender.com
+```
+
+Useful review links:
+
+- Health check: `https://assessment-recommender-r93z.onrender.com/health`
+- Swagger UI: `https://assessment-recommender-r93z.onrender.com/docs`
+- OpenAPI JSON: `https://assessment-recommender-r93z.onrender.com/openapi.json`
+
+This assignment does not require a homepage, so the root URL may show `{"detail":"Not Found"}`. Please use `/docs`, `/health`, or `POST /chat` for evaluation.
+
 ## Project Overview
 
 The project supports five core conversation flows:
