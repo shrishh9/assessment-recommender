@@ -91,17 +91,16 @@ DEBUG=false
 
 Do not commit `.env`. Use `.env.example` as the shareable template.
 
-Verify that the app can see the Groq key:
+Verify that the app imports correctly:
 
 ```powershell
-.\.venv\Scripts\python.exe -c "import os; import app.main; import app.routes as routes; print(bool(os.getenv('GROQ_API_KEY'))); print(routes.flow.llm_client is not None)"
+.\.venv\Scripts\python.exe -c "import app.main; print('ok')"
 ```
 
 Expected output:
 
 ```text
-True
-True
+ok
 ```
 
 ## Running Locally
@@ -117,6 +116,69 @@ http://127.0.0.1:8000/docs
 ```
 
 The root URL does not serve a UI. Use `/docs`, `/health`, or the `POST /chat` endpoint.
+
+## Deployed API
+
+The project is deployed on Render:
+
+```text
+https://assessment-recommender-r93z.onrender.com
+```
+
+This assignment does not require a homepage, so seeing `{"detail":"Not Found"}` at `/` is acceptable. Use the API endpoints below for verification.
+
+### Health Endpoint
+
+Open:
+
+```text
+https://assessment-recommender-r93z.onrender.com/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Swagger UI
+
+Open:
+
+```text
+https://assessment-recommender-r93z.onrender.com/docs
+```
+
+This shows the interactive API documentation.
+
+### OpenAPI JSON
+
+Open:
+
+```text
+https://assessment-recommender-r93z.onrender.com/openapi.json
+```
+
+If this loads, the API is correctly exposed.
+
+### Test `/chat` In Swagger
+
+In Swagger UI, open `POST /chat`, select **Try it out**, and use:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "I am hiring a Python backend engineer."
+    }
+  ]
+}
+```
+
+The API also accepts `conversation_history` for compatibility, but `messages` is the preferred request field.
 
 ## API Endpoints
 
@@ -136,7 +198,7 @@ Request schema:
 
 ```json
 {
-  "conversation_history": [
+  "messages": [
     {
       "role": "user",
       "content": "I need assessments for a senior Python backend engineer with problem solving skills."
@@ -147,7 +209,8 @@ Request schema:
 
 Rules:
 
-- `conversation_history` must contain 1 to 8 messages.
+- `messages` must contain 1 to 8 messages.
+- `conversation_history` is also accepted as a backwards-compatible alias.
 - Message `role` must be `user`, `assistant`, or `system`.
 - The API does not store server-side conversation state.
 
@@ -325,6 +388,13 @@ Render start command:
 ```text
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
+
+Final deployment checklist:
+
+- Health: `https://assessment-recommender-r93z.onrender.com/health`
+- Swagger UI: `https://assessment-recommender-r93z.onrender.com/docs`
+- OpenAPI JSON: `https://assessment-recommender-r93z.onrender.com/openapi.json`
+- Chat: `POST /chat` works from Swagger UI
 
 ## Future Improvements
 
