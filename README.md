@@ -70,6 +70,21 @@ test/
   test_agent.py
   test_retrieval.py
 ```
+## Deployment
+
+
+Render start command:
+
+```text
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Final deployment:
+
+- Health: `https://assessment-recommender-r93z.onrender.com/health`
+- Swagger UI: `https://assessment-recommender-r93z.onrender.com/docs`
+- OpenAPI JSON: `https://assessment-recommender-r93z.onrender.com/openapi.json`
+- Chat: `POST /chat` works from Swagger UI
 
 ## Installation
 
@@ -379,22 +394,7 @@ Expected:
 - Groq is used for concise response generation, while catalog identity fields come from retrieval metadata.
 - The API remains stateless so it is simple to deploy and test.
 
-## Deployment
 
-The repository includes `render.yaml` for Render deployment. Configure `GROQ_API_KEY` as a secret environment variable in Render.
-
-Render start command:
-
-```text
-uvicorn app.main:app --host 0.0.0.0 --port $PORT
-```
-
-Final deployment checklist:
-
-- Health: `https://assessment-recommender-r93z.onrender.com/health`
-- Swagger UI: `https://assessment-recommender-r93z.onrender.com/docs`
-- OpenAPI JSON: `https://assessment-recommender-r93z.onrender.com/openapi.json`
-- Chat: `POST /chat` works from Swagger UI
 
 ## Future Improvements
 
